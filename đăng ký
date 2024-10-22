@@ -1,0 +1,16 @@
+public class XuLyVanBan {
+    public static void main(String[] args) throws IOException{
+        TreeSet<String> set = new TreeSet<>();
+        Scanner in = new Scanner(new File("VANBAN.in"));
+        while(in.hasNextLine()){
+            String[] words = in.nextLine().split("\\s+");
+            for(String s : words){
+                if(s.matches(",*\\d.*") && !s.matches(".*[.,!?:].*")){
+                    set.add(s);
+                }
+            }
+        }
+        for(String s : set){
+            System.out.println(s);
+        }
+    }
