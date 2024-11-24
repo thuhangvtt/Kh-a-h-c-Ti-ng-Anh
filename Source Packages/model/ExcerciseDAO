@@ -1,6 +1,6 @@
-package dao;
+package model;
 
-import model.Exercise;
+import entity.Exercise;
 import util.DBConnection;
 
 import java.sql.Connection;
