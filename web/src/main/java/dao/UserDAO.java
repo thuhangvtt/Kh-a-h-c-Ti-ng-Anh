@@ -54,4 +54,18 @@ public class UserDAO {
         }
         return user;
     }
+    public boolean updateUser(int userId, String name, String phone) {
+        String query = "UPDATE Users SET name = ?, telephone = ? WHERE user_id = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+             stmt.setString(1, name);
+             stmt.setString(2, phone);
+             stmt.setInt(3, userId);
+             int rowsAffected = stmt.executeUpdate();
+             return rowsAffected > 0;
+        } catch (SQLException e) {
+             e.printStackTrace();
+        }
+        return false;
+    }
 }
