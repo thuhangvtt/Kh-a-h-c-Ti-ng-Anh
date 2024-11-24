@@ -8,9 +8,9 @@ import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
 
-import dao.UserDAO;
-import dao.EnrollmentDAO;
-import model.User;
+import model.UserDAO;
+import model.EnrollmentDAO;
+import entity.User;
 
 @WebServlet("/enroll-course")
 public class Course extends HttpServlet {
