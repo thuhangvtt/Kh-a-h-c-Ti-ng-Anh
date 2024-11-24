@@ -1,4 +1,4 @@
-import model.Enrollment;
+import entity.Enrollment;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
