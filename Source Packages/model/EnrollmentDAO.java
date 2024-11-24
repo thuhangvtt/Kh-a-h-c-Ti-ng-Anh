@@ -1,3 +1,4 @@
+package model;
 import entity.Enrollment;
 import java.sql.*;
 import java.util.ArrayList;
