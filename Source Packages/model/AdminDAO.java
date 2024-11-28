@@ -1,8 +1,10 @@
 package model;
 
 import entity.AdminAccount;
+import entity.Course;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,7 +21,6 @@ public class AdminDAO extends TKAdmin
                 a.setUsername(rs.getString("username"));
                 a.setPassword(rs.getString("password"));
                 a.setName(rs.getString("name"));
-                a.setPhone(rs.getString("phone"));
                 a.setEmail(rs.getString("email"));
             }
         } catch (Exception e) {
@@ -27,5 +28,16 @@ public class AdminDAO extends TKAdmin
         }
         return a;
     }
-	
+	public void createCourse(Course course) {
+        try {
+            PreparedStatement statement = connection.prepareStatement(""
+                    + "INSERT INTO courses (id, name, description) "
+                    + "VALUES (?, ?, ?)");
+            statement.setInt(1, course.getId());
+            statement.setString(2, course.getName());
+            statement.setString(3, course.getDescription());
+            statement.executeUpdate();
+        } catch (SQLException ex) {
+        }
+    }
 }
