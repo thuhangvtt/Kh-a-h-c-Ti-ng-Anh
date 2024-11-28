@@ -1,524 +1,527 @@
-USE [master];
-GO
+-- Xóa database nếu đã tồn tại
+DROP DATABASE IF EXISTS KHTA;
 
-IF EXISTS(SELECT name FROM sys.databases WHERE name = N'KHTA')
-BEGIN
-    ALTER DATABASE KHTA SET OFFLINE WITH ROLLBACK IMMEDIATE;
-    ALTER DATABASE KHTA SET ONLINE;
-    DROP DATABASE KHTA;
-END;
+-- Tạo database mới
+CREATE DATABASE KHTA;
+USE KHTA;
 
-CREATE DATABASE KHTA
-GO
-
-USE KHTA
-GO
-
---BANG NGUOI DUNG
+-- Bảng Users
 CREATE TABLE Users (
-    user_id INT IDENTITY PRIMARY KEY,
-	user_name NVARCHAR(255) NOT NULL UNIQUE,
-	[password] VARCHAR(255) NOT NULL,
-	email NVARCHAR(255) NOT NULL UNIQUE,
-	[name] NVARCHAR(255) ,
-	telephone VARCHAR(15),
-	[disabled] BIT  DEFAULT 0, -- Trạng thái của tài khoản 
-	created_at DATE DEFAULT GETDATE(),
-	modified_at DATE
-);
-CREATE TABLE admin_account(
-    user_id INT IDENTITY PRIMARY KEY,
-	username NVARCHAR(255) NOT NULL UNIQUE,
-	[password] VARCHAR(255) NOT NULL,
-	[name]      NVARCHAR(255) ,
-    telephone        NVARCHAR(15),
-    email       NVARCHAR(255) NOT NULL UNIQUE,
-    created_at  DATE DEFAULT GETDATE(),
-    modified_at DATE
-);
--- DANH MUC KHOA HOC
-CREATE TABLE categories (
-    id INT IDENTITY PRIMARY KEY,
-    slug NVARCHAR(255),
-    img NVARCHAR(255),
-    [name] NVARCHAR(255) NOT NULL UNIQUE,
-    [description] NVARCHAR(MAX)
-);
---BANG KHOA HOC
-CREATE TABLE courses (
-    id INT IDENTITY PRIMARY KEY,
-    [name] NVARCHAR(500) NOT NULL,
-    slug NVARCHAR(500) NOT NULL,
-    [image] NVARCHAR(255),
-    [description] NVARCHAR(MAX),
-    category_id INT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
-    NumberEnrolled INT NULL,
-    Objectives NVARCHAR(MAX),
-    create_at DATE DEFAULT GETDATE(),
-    modified_at DATE NULL,
-    approve_at DATE DEFAULT NULL,
-    [disabled] BIT NOT NULL DEFAULT 0
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_name VARCHAR(255),
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    telephone VARCHAR(15),
+    disabled BIT DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modified_at DATETIME ON UPDATE CURRENT_TIMESTAMP 
 );
 
---BANG BAI HOC
+-- Bảng admin_account
+CREATE TABLE admin_account (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(255),
+    telephone VARCHAR(15),
+    email VARCHAR(255) NOT NULL UNIQUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modified_at DATETIME ON UPDATE CURRENT_TIMESTAMP 
+);
+
+-- Bảng categories
+CREATE TABLE categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    slug VARCHAR(255),
+    img VARCHAR(255),
+    name VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT
+);
+
+-- Bảng courses
+CREATE TABLE courses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(500) NOT NULL UNIQUE,
+    slug VARCHAR(500) NOT NULL,
+    image VARCHAR(255),
+    description TEXT,
+    category_id INT NOT NULL,
+    NumberEnrolled INT,
+    Objectives TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modified_at DATETIME ON UPDATE CURRENT_TIMESTAMP,
+    approve_at DATE DEFAULT NULL,
+    disabled BIT DEFAULT 0,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+);
+
+-- Bảng Lessons
 CREATE TABLE Lessons (
-    id            INT IDENTITY PRIMARY KEY,
-    course_id INT NOT NULL REFERENCES courses(id),
-    title         NVARCHAR(500) NOT NULL,
-    slug          NVARCHAR(500),
-    video_link    NVARCHAR(MAX),
-    created_at DATE NOT NULL DEFAULT GETDATE(),
-    is_disabled     BIT DEFAULT 0,
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    course_id INT NOT NULL,
+    title VARCHAR(500) NOT NULL,
+    slug VARCHAR(500),
+    video_link TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_disabled BIT DEFAULT 0,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
 );
---BANG DANG KY
-CREATE TABLE enrollments(
-    user_id INT NOT NULL REFERENCES Users(user_id),
-    course_id INT NOT NULL REFERENCES courses(id),
-    enrolled_at DATE NOT NULL DEFAULT GETDATE(),
-    PRIMARY KEY (user_id, course_id)
+
+-- Bảng enrollments
+CREATE TABLE enrollments (
+    user_id INT NOT NULL,
+    course_id INT NOT NULL,
+    enrolled_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, course_id),
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
 );
---BANG LUYEN TAP
+
+-- Bảng Exercises
 CREATE TABLE Exercises (
-    exercise_id INT IDENTITY PRIMARY KEY,
-    lesson_id INT NOT NULL REFERENCES Lessons(id) ON DELETE CASCADE,
-    exercise_name NVARCHAR(100) NOT NULL,
-    exercise_link NVARCHAR(MAX) NOT NULL  -- Link bài tập 
+    exercise_id INT AUTO_INCREMENT PRIMARY KEY,
+    lesson_id INT NOT NULL,
+    exercise_name VARCHAR(100) NOT NULL,
+    exercise_link TEXT NOT NULL,
+    FOREIGN KEY (lesson_id) REFERENCES Lessons(id) ON DELETE CASCADE
 );
---BANG QUA TRINH
+
+-- Bảng Progress
 CREATE TABLE Progress (
-    progress_id INT IDENTITY PRIMARY KEY,
-    user_id INT NOT NULL REFERENCES Users(user_id),
-    course_id INT NOT NULL REFERENCES courses(id),
+    progress_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    course_id INT NOT NULL,
     lessons_completed INT DEFAULT 0,
     exercises_completed INT DEFAULT 0,
-    last_accessed_date DATE
+    last_accessed_date DATE,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
 );
---BANG THONG BAO NHAC NHO
+
+-- Bảng Notifications
 CREATE TABLE Notifications (
-    notification_id INT IDENTITY PRIMARY KEY,
-    user_id INT NOT NULL REFERENCES Users(user_id),
-    message NVARCHAR(MAX),
-    notification_date DATE DEFAULT GETDATE(),
-    status NVARCHAR(10) CHECK (status IN ('unread', 'read')) DEFAULT 'unread'
+    notification_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    message TEXT,
+    notification_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(10) CHECK (status IN ('unread', 'read')) DEFAULT 'unread',
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
 );
---BANG LO TRINH HOC
+
+-- Bảng StudyPaths
 CREATE TABLE StudyPaths (
-    path_id INT IDENTITY PRIMARY KEY,
-    course_id INT NOT NULL REFERENCES courses(id),
-    path_name NVARCHAR(100),
-    lesson_id INT REFERENCES Lessons(id) -- Link đến bài giảng
+    path_id INT AUTO_INCREMENT PRIMARY KEY,
+    course_id INT NOT NULL,
+    path_name VARCHAR(100),
+    lesson_id INT,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    FOREIGN KEY (lesson_id) REFERENCES Lessons(id) ON DELETE SET NULL
 );
---BANG DANH SACH CA BANG TU VUNG
+
+-- Bảng VocabularyLists
 CREATE TABLE VocabularyLists (
-    vocab_list_id INT IDENTITY PRIMARY KEY,
-    list_name NVARCHAR(100) NOT NULL,
-    user_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
-    created_date DATE DEFAULT GETDATE()
+    vocab_list_id INT AUTO_INCREMENT PRIMARY KEY,
+    list_name VARCHAR(100) NOT NULL,
+    user_id INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
 );
---BANG TU VUNG CA NHAN
+
+-- Bảng Vocabulary
 CREATE TABLE Vocabulary (
-    vocab_id INT IDENTITY PRIMARY KEY,
-    vocab_list_id INT NOT NULL REFERENCES VocabularyLists(vocab_list_id) ON DELETE CASCADE,
-    word NVARCHAR(100) NOT NULL,
-    definition NVARCHAR(MAX)
+    vocab_id INT AUTO_INCREMENT PRIMARY KEY,
+    vocab_list_id INT NOT NULL,
+    word VARCHAR(100) NOT NULL,
+    definition TEXT,
+    FOREIGN KEY (vocab_list_id) REFERENCES VocabularyLists(vocab_list_id) ON DELETE CASCADE
 );
---BANG DANH GIA KHOA HOC
+
+-- Bảng Ratings
 CREATE TABLE Ratings (
-    id INT IDENTITY PRIMARY KEY,
-    user_id INT NOT NULL REFERENCES Users(user_id),
-    course_id INT NOT NULL REFERENCES courses(id),
-    review_text NVARCHAR(MAX),
-    created_at DATE NOT NULL DEFAULT GETDATE() 
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    course_id INT NOT NULL,
+    review_text TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
 );
-GO
-ALTER TABLE categories ADD CONSTRAINT UQ_category_name UNIQUE ([name]);
-ALTER TABLE courses ADD CONSTRAINT UQ_course_name UNIQUE ([name]);
 
+INSERT INTO Users (name, email, password)
+VALUES 
+    ('hằng',  'user1@example.com', 'pass123'),
+    ('giang', 'user2@example.com', 'pass456');
 
-INSERT INTO Users (user_name, email, [password])
+-- Chèn dữ liệu vào bảng admin_account
+INSERT INTO admin_account (username, password, name, telephone, email, created_at)
 VALUES 
-    ('user1',  'user1@example.com', 'pass123'),
-    ('user2', 'user2@example.com', 'pass456');
+    ('hang_2004', '12345', 'Thu Hằng', '0971397361', 'hangv2k@gmail.com', CURRENT_TIMESTAMP);
 
-SELECT *FROM Users;
-GO
-INSERT INTO admin_account (username, [password], [name], telephone, email, created_at)
-VALUES (N'hang_2004', '12345', N'Thu Hằng', '0971397361', 'hangv2k@gmail.com', GETDATE());
-GO
-INSERT INTO categories (slug, img, [name], [description])
+-- Chèn dữ liệu vào bảng categories
+INSERT INTO categories (slug, img, name, description)
 VALUES 
-    ('toiec', 'img1.jpg', N'TOIEC', N'Khóa học TOEIC giúp học viên làm quen với các kỹ năng tiếng Anh được yêu cầu trong bài thi TOEIC, một kỳ thi phổ biến dùng để đánh giá trình độ tiếng Anh của người học trong môi trường làm việc quốc tế. Phù hợp cho người bắt đầu chuẩn bị thi TOEIC và cần nền tảng cơ bản.'),
-    ('ielts', 'img2.jpg', N'IELTS', N'Khóa học IELTS giúp học viên nâng cao khả năng tiếng Anh để chuẩn bị cho kỳ thi IELTS, bao gồm 4 kỹ năng: Nghe, Nói, Đọc và Viết. Khóa học này phù hợp cho những người muốn đạt được điểm số cao trong kỳ thi IELTS và có mục tiêu du học, định cư, hoặc làm việc ở môi trường quốc tế.'),
-    ('tieng-anh-giao-tiep', 'img3.jpg', N'Tiếng Anh Giao Tiếp', N'Khóa học Tiếng Anh Giao Tiếp giúp học viên phát triển kỹ năng giao tiếp tiếng Anh trong các tình huống hàng ngày và công việc. Khóa học này thường tập trung vào việc rèn luyện kỹ năng nghe và nói, mở rộng từ vựng và các cấu trúc câu phổ biến trong giao tiếp, giúp người học có thể giao tiếp tự tin và tự nhiên hơn.');
--- Chèn các khóa học thuộc danh mục TOEIC
-INSERT INTO courses ([name], slug, [image], [description], category_id, NumberEnrolled, Objectives, create_at, [disabled])
-VALUES 
-    (N'Nền tảng TOEIC', 'nen-tang-toiec', 'img_toeic_foundation.jpg', N'Khóa học nền tảng TOEIC cho người mới bắt đầu.', 1, 20, N'Chuẩn bị nền tảng cho TOEIC.', GETDATE(), 0),
-    (N'TOEIC trung cấp', 'toeic-trung-cap', 'img_toeic_intermediate.jpg', N'Khóa học TOEIC trung cấp.', 1, 30, N'Nâng cao kiến thức TOEIC.', GETDATE(), 0),
-    (N'TOEIC chuyên sâu', 'toeic-chuyen-sau', 'img_toeic_advanced.jpg', N'Khóa học TOEIC nâng cao cho người chuẩn bị thi TOEIC.', 1, 40, N'Luyện thi TOEIC nâng cao.', GETDATE(), 0);
+    ('toiec', 'img1.jpg', 'TOEIC', 'Khóa học TOEIC giúp học viên làm quen với các kỹ năng tiếng Anh...'),
+    ('ielts', 'img2.jpg', 'IELTS', 'Khóa học IELTS giúp học viên nâng cao khả năng tiếng Anh...'),
+    ('tieng-anh-giao-tiep', 'img3.jpg', 'Tiếng Anh Giao Tiếp', 'Khóa học Tiếng Anh Giao Tiếp...');
 
--- Chèn các khóa học thuộc danh mục IELTS
-INSERT INTO courses ([name], slug, [image], [description], category_id, NumberEnrolled, Objectives, create_at, [disabled])
+-- Chèn dữ liệu vào bảng courses
+INSERT INTO courses (name, slug, image, description, category_id, NumberEnrolled, Objectives, created_at, disabled)
 VALUES 
-    (N'IELTS Foundation', 'ielts-foundation', 'img_ielts_foundation.jpg', N'Khóa học nền tảng IELTS.', 2, 25, N'Chuẩn bị nền tảng cho IELTS.', GETDATE(), 0),
-    (N'IELTS Intensive Reading', 'ielts-intensive-reading', 'img_ielts_reading.jpg', N'Luyện đọc chuyên sâu cho kỳ thi IELTS.', 2, 35, N'Kỹ năng đọc IELTS.', GETDATE(), 0),
-    (N'IELTS Writing Skills', 'ielts-writing-skills', 'img_ielts_writing.jpg', N'Phát triển kỹ năng viết cho IELTS.', 2, 30, N'Nâng cao kỹ năng viết cho IELTS.', GETDATE(), 0);
-INSERT INTO courses ([name], slug, [image], [description], category_id, NumberEnrolled, Objectives, create_at, [disabled])
-VALUES
-    (N'Tiếng Anh giao tiếp', 'tieng-anh-giao-tiep', 'img_conv_advanced.jpg', N'Tăng cường kỹ năng giao tiếp tiếng Anh.', 3, 15, N'Luyện giao tiếp nâng cao.', GETDATE(), 0);
+    ('Nền tảng TOEIC', 'nen-tang-toiec', 'img_toeic_foundation.jpg', 'Khóa học nền tảng TOEIC...', 1, 20, 'Chuẩn bị nền tảng cho TOEIC.', CURRENT_TIMESTAMP, 0),
+    ('TOEIC trung cấp', 'toeic-trung-cap', 'img_toeic_intermediate.jpg', 'Khóa học TOEIC trung cấp.', 1, 30, 'Nâng cao kiến thức TOEIC.', CURRENT_TIMESTAMP, 0),
+    ('TOEIC chuyên sâu', 'toeic-chuyen-sau', 'img_toeic_advanced.jpg', 'Khóa học TOEIC nâng cao cho người chuẩn bị thi TOEIC.', 1, 40, 'Luyện thi TOEIC nâng cao.', CURRENT_TIMESTAMP, 0),
+    ('IELTS Foundation', 'ielts-foundation', 'img_ielts_foundation.jpg', 'Khóa học nền tảng IELTS.', 2, 25, 'Chuẩn bị nền tảng cho IELTS.', CURRENT_TIMESTAMP, 0),
+    ('IELTS Intensive Reading', 'ielts-intensive-reading', 'img_ielts_reading.jpg', 'Luyện đọc chuyên sâu cho kỳ thi IELTS.', 2, 35, 'Kỹ năng đọc IELTS.', CURRENT_TIMESTAMP, 0),
+    ('IELTS Writing Skills', 'ielts-writing-skills', 'img_ielts_writing.jpg', 'Phát triển kỹ năng viết cho IELTS.', 2, 30, 'Nâng cao kỹ năng viết cho IELTS.', CURRENT_TIMESTAMP, 0),
+    ('Tiếng Anh giao tiếp', 'tieng-anh-giao-tiep', 'img_conv_advanced.jpg', 'Tăng cường kỹ năng giao tiếp tiếng Anh.', 3, 15, 'Luyện giao tiếp nâng cao.', CURRENT_TIMESTAMP, 0);
+-- Chèn dữ liệu vào bảng Lessons
 INSERT INTO Lessons (course_id, title, slug, video_link, created_at, is_disabled)
 VALUES 
-    (1, N'Cấu trúc câu đơn giản', 'cau-truc-cau-don-gian', 'https://www.youtube.com/watch?v=9piusqcHneI', GETDATE(), 0),
-    (1, N'Danh từ', 'danh-tu', 'https://youtu.be/9uE7dWl-Gk8', GETDATE(), 0),
-    (1, N'Động từ', 'dong-tu', 'https://youtu.be/zGQLleQbCZ4', GETDATE(), 0),
-    (1, N'Tranh tả người: Các hoạt động của mắt', 'trang-ta-nguoi-cac-hoat-dong-cua-mat', 'https://youtu.be/M2Fkm6OKWYI', GETDATE(), 0),
-    (1, N'Tranh tả người: Các hoạt động của cơ thể', 'tranh-ta-nguoi-cac-hoat-dong-cua-co-the', 'https://youtu.be/WFFyFZRSPfQ?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Đại từ', 'dai-tu', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Tranh tả cảnh vật', 'business-terms', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Tính từ và trạng từ', 'business-conversation', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Tranh tả cảnh vật : ', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Giới từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Tranh tả cảnh vật', 'dai-tu', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Các mẫu câu', 'business-terms', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Tranh tả cảnh vật', 'business-conversation', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Câu hỏi Who', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Câu hỏi Where', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Câu hỏi When', 'dai-tu', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-0', GETDATE(), 0),
-    (1, N'Câu hỏi Why', 'business-terms', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Câu hỏi What', 'business-conversation', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Câu hỏi Why', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Câu hỏi Yes/ No', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Hoàn thành câu: Entertainment', 'dai-tu', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Hoàn thành câu: Finance & Budgeting', 'business-terms', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Hoàn thành câu: General Business', 'business-conversation', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Hoàn thành câu: Health', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (1, N'Hoàn thành câu: Housing/property', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (2, N'Listening: Trang tả người', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Reading: Giới thiệu chung về part 5', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Chủ đề về hợp đồng và tiếp thị', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Listening: Giới thiệu chung về câu hỏi WH và câu hỏi How', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Reading: Danh từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Chủ đề về bảo hành và kế hoạch kinh doanh', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Listening: Trang tả vật', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Reading: Đại từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Chủ đề về hội thảo và máy tính', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Listening: 7 dạng câu hỏi What', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Reading: Tính từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Chủ đề về thiết bị văn phòng và thủ tục tại văn phòng', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Listening: Tổng ôn tập part 1', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Reading: Trạng từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Chủ đề về điện tử và thư tín', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Listening: Câu hỏi Why và câu hỏi lựa chọn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Reading: Danh từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Chủ đề về quảng cáo việc làm & tuyển dụng, nộp hồ sơ và phỏng vấn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Reading 6: Giới thiệu chung về part 6', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Listening: Câu hỏi Yes/No', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Chủ đề về tuyển dụng & đào tạo và tiền lương & phúc lợi', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Reading: Hòa hợp S - V', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Listening: Giới thiệu về part 3', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Chủ đề về khuyến mãi, lương hưu, giải thưởng và mua sắm', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Reading: Bị động', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Listening: Câu hỏi nội dung', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Chủ đề về đặt hàng vật tư và vận chuyển', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Reading: Liên từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Listening: Câu hỏi trích dẫn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Chủ đề về hóa đơn và hàng tồn kho', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Reading: Mệnh đề quan hệ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Reading: Thì hoàn thành', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Reading: Thì tiếp diễn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Listening: Giới thiệu chung về part 4', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Reading: Giới thiệu về part 7', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Listening: Câu hỏi bảng biểu', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(2, N'Reading: Kỹ năng scanning', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Listening]Part 1 - Làm quen với dạng bài tả tranh', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'Bài giới thiệu về giáo viên và khóa học', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'Chủ đề về ngân hàng và kế toán', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Reading]Part 5 & Part 6 - Mẹo ngữ pháp nâng cao tổng hợp', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Listening]Part 2 - Dạng câu hỏi Who, Where, When', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'Chủ đề về đầu tư và thuế', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Reading]Part 7 - Giới thiệu cấu trúc bài thi và cách xử lý các dạng câu hỏi', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Listening]Part 3 - Làm quen với dạng câu hỏi hội thoại', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'Chủ đề về báo cáo tài chính, tài sản & phòng ban', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Reading]Part 5 & Part 6 - Vị trí trạng từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Listening]Part 4 - Câu hỏi thông tin chung và câu hỏi chi tiết', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'Chủ đề về phát triển sản phẩm và cho thuê', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Listening]Part 1 & Part 2 - Các bẫy thường gặp & dạng cây hỏi Why', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Reading] Part 7 - Kỹ thuật paraphrasing', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'Chủ đề về Các cuộc họp HĐQT & Ủy ban và Kiểm soát chất lượng', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Listening] Part 3 - Dạng câu hỏi bảng biểu', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Reading] Part 5 - Mệnh đề quan hệ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'Chủ đề về Chọn nhà hàng và Ăn ngoài', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Listening] Part 4 - Câu hỏi thông tin chi tiết', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Reading] Part 5 & Part 6 - Mệnh đề quan hệ rút gọn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'Chủ đề về Đặt đồ ăn trưa và Nghề nấu ăn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Listening] Part 2 - 4 bẫy phổ biến của bài thi', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Reading] Part 5 & Part 6 - Thể giả định theo sau là động từ số ít - Hoà hợp chủ vị nâng cao', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'Chủ đề về Sự kiện và Du lịch tổng hợp', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Listening] Part 4 - Câu hỏi cuối bài nói', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Reading] Part 6 - Câu hỏi từ vựng', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Listening] Part 3 - Chủ đề vể Hàng không và Tàu', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Reading] Part 7 - Kỹ thuật paraphrasing (2)', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Listening] Part 4 - Bẫy nhiễu thông tin', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'Chủ đề về Khách sạn và cho thuê ô tô', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'Chủ đề về Truyền thông và Phòng khám', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Reading] Part 5 & Part 6 - Tổng ôn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Listening] Part 3 - Tổng ôn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'[Reading] Part 7 - Tổng ôn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'Chủ đề về Âm nhạc và Bảo tàng', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'Chủ đề về Rạp chiếu phim và Kịch nghệ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'Chủ đề bệnh viện và y dược', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(3, N'Chủ đề về nha sĩ và bảo hiểm y tế', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0)
-	(4, N'Cấu trúc câu đơn giản', 'cau-truc-cau-don-gian', 'https://www.youtube.com/watch?v=9piusqcHneI', GETDATE(), 0),
-    (4, N'Danh từ', 'danh-tu', 'https://youtu.be/9uE7dWl-Gk8', GETDATE(), 0),
-    (4, N'Động từ', 'dong-tu', 'https://youtu.be/zGQLleQbCZ4', GETDATE(), 0),
-    (4, N'Tranh tả người: Các hoạt động của mắt', 'trang-ta-nguoi-cac-hoat-dong-cua-mat', 'https://youtu.be/M2Fkm6OKWYI', GETDATE(), 0),
-    (4, N'Tranh tả người: Các hoạt động của cơ thể', 'tranh-ta-nguoi-cac-hoat-dong-cua-co-the', 'https://youtu.be/WFFyFZRSPfQ?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Đại từ', 'dai-tu', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Tranh tả cảnh vật', 'business-terms', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Tính từ và trạng từ', 'business-conversation', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Tranh tả cảnh vật : ', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Giới từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Tranh tả cảnh vật', 'dai-tu', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Các mẫu câu', 'business-terms', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Tranh tả cảnh vật', 'business-conversation', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Câu hỏi Who', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Câu hỏi Where', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Câu hỏi When', 'dai-tu', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-0', GETDATE(), 0),
-    (4, N'Câu hỏi Why', 'business-terms', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Câu hỏi What', 'business-conversation', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Câu hỏi Why', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Câu hỏi Yes/ No', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Hoàn thành câu: Entertainment', 'dai-tu', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Hoàn thành câu: Finance & Budgeting', 'business-terms', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Hoàn thành câu: General Business', 'business-conversation', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Hoàn thành câu: Health', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-    (4, N'Hoàn thành câu: Housing/property', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-        (5, N'Listening: Trang tả người', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Reading: Giới thiệu chung về part 5', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Chủ đề về hợp đồng và tiếp thị', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Listening: Giới thiệu chung về câu hỏi WH và câu hỏi How', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Reading: Danh từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Chủ đề về bảo hành và kế hoạch kinh doanh', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Listening: Trang tả vật', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Reading: Đại từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Chủ đề về hội thảo và máy tính', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Listening: 7 dạng câu hỏi What', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Reading: Tính từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Chủ đề về thiết bị văn phòng và thủ tục tại văn phòng', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Listening: Tổng ôn tập part 1', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Reading: Trạng từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Chủ đề về điện tử và thư tín', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Listening: Câu hỏi Why và câu hỏi lựa chọn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Reading: Danh từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Chủ đề về quảng cáo việc làm & tuyển dụng, nộp hồ sơ và phỏng vấn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Reading 6: Giới thiệu chung về part 6', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Listening: Câu hỏi Yes/No', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Chủ đề về tuyển dụng & đào tạo và tiền lương & phúc lợi', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Reading: Hòa hợp S - V', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Listening: Giới thiệu về part 3', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Chủ đề về khuyến mãi, lương hưu, giải thưởng và mua sắm', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Reading: Bị động', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Listening: Câu hỏi nội dung', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Chủ đề về đặt hàng vật tư và vận chuyển', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Reading: Liên từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Listening: Câu hỏi trích dẫn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Chủ đề về hóa đơn và hàng tồn kho', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Reading: Mệnh đề quan hệ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Reading: Thì hoàn thành', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Reading: Thì tiếp diễn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Listening: Giới thiệu chung về part 4', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Reading: Giới thiệu về part 7', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Listening: Câu hỏi bảng biểu', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(5, N'Reading: Kỹ năng scanning', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Listening]Part 1 - Làm quen với dạng bài tả tranh', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'Bài giới thiệu về giáo viên và khóa học', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'Chủ đề về ngân hàng và kế toán', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Reading]Part 5 & Part 6 - Mẹo ngữ pháp nâng cao tổng hợp', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Listening]Part 2 - Dạng câu hỏi Who, Where, When', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'Chủ đề về đầu tư và thuế', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Reading]Part 7 - Giới thiệu cấu trúc bài thi và cách xử lý các dạng câu hỏi', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Listening]Part 3 - Làm quen với dạng câu hỏi hội thoại', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'Chủ đề về báo cáo tài chính, tài sản & phòng ban', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Reading]Part 5 & Part 6 - Vị trí trạng từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Listening]Part 4 - Câu hỏi thông tin chung và câu hỏi chi tiết', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'Chủ đề về phát triển sản phẩm và cho thuê', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Listening]Part 1 & Part 2 - Các bẫy thường gặp & dạng cây hỏi Why', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Reading] Part 7 - Kỹ thuật paraphrasing', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'Chủ đề về Các cuộc họp HĐQT & Ủy ban và Kiểm soát chất lượng', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Listening] Part 3 - Dạng câu hỏi bảng biểu', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Reading] Part 5 - Mệnh đề quan hệ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'Chủ đề về Chọn nhà hàng và Ăn ngoài', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Listening] Part 4 - Câu hỏi thông tin chi tiết', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Reading] Part 5 & Part 6 - Mệnh đề quan hệ rút gọn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'Chủ đề về Đặt đồ ăn trưa và Nghề nấu ăn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Listening] Part 2 - 4 bẫy phổ biến của bài thi', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Reading] Part 5 & Part 6 - Thể giả định theo sau là động từ số ít - Hoà hợp chủ vị nâng cao', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'Chủ đề về Sự kiện và Du lịch tổng hợp', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Listening] Part 4 - Câu hỏi cuối bài nói', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Reading] Part 6 - Câu hỏi từ vựng', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Listening] Part 3 - Chủ đề vể Hàng không và Tàu', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Reading] Part 7 - Kỹ thuật paraphrasing (2)', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Listening] Part 4 - Bẫy nhiễu thông tin', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'Chủ đề về Khách sạn và cho thuê ô tô', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'Chủ đề về Truyền thông và Phòng khám', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Reading] Part 5 & Part 6 - Tổng ôn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Listening] Part 3 - Tổng ôn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'[Reading] Part 7 - Tổng ôn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'Chủ đề về Âm nhạc và Bảo tàng', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'Chủ đề về Rạp chiếu phim và Kịch nghệ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'Chủ đề bệnh viện và y dược', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(6, N'Chủ đề về nha sĩ và bảo hiểm y tế', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0)
-	(7, N'[Reading] Part 6 - Câu hỏi từ vựng', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(7, N'[Listening] Part 3 - Chủ đề vể Hàng không và Tàu', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(7, N'[Reading] Part 7 - Kỹ thuật paraphrasing (2)', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(7, N'[Listening] Part 4 - Bẫy nhiễu thông tin', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(7, N'Chủ đề về Khách sạn và cho thuê ô tô', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(7, N'Chủ đề về Truyền thông và Phòng khám', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(7, N'[Reading] Part 5 & Part 6 - Tổng ôn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(7, N'[Listening] Part 3 - Tổng ôn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(7, N'[Reading] Part 7 - Tổng ôn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(7, N'Chủ đề về Âm nhạc và Bảo tàng', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(7, N'Chủ đề về Rạp chiếu phim và Kịch nghệ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(7, N'Chủ đề bệnh viện và y dược', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0),
-	(7, N'Chủ đề về nha sĩ và bảo hiểm y tế', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', GETDATE(), 0);
-INSERT INTO enrollments (user_id, course_id, enrolled_at)
-VALUES 
-    (1, 1, GETDATE()), (2, 2, GETDATE());
+    (1, 'Cấu trúc câu đơn giản', 'cau-truc-cau-don-gian', 'https://www.youtube.com/watch?v=9piusqcHneI', CURRENT_TIMESTAMP, 0),
+    (1, 'Danh từ', 'danh-tu', 'https://youtu.be/9uE7dWl-Gk8', CURRENT_TIMESTAMP, 0),
+    (1, 'Cấu trúc câu đơn giản', 'cau-truc-cau-don-gian', 'https://www.youtube.com/watch?v=9piusqcHneI', CURRENT_TIMESTAMP, 0),
+    (1, 'Danh từ', 'danh-tu', 'https://youtu.be/9uE7dWl-Gk8', CURRENT_TIMESTAMP, 0),
+    (1, 'Động từ', 'dong-tu', 'https://youtu.be/zGQLleQbCZ4', CURRENT_TIMESTAMP, 0),
+    (1, 'Tranh tả người: Các hoạt động của mắt', 'trang-ta-nguoi-cac-hoat-dong-cua-mat', 'https://youtu.be/M2Fkm6OKWYI', CURRENT_TIMESTAMP, 0),
+    (1, 'Tranh tả người: Các hoạt động của cơ thể', 'tranh-ta-nguoi-cac-hoat-dong-cua-co-the', 'https://youtu.be/WFFyFZRSPfQ?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+    (1, 'Đại từ', 'dai-tu', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+    (1, 'Tranh tả cảnh vật', 'business-terms', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+    (1, 'Tính từ và trạng từ', 'business-conversation', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+    (1, 'Tranh tả cảnh vật : ', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+    (1, 'Giới từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(1, 'Tranh tả cảnh vật', 'dai-tu', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+    (1, 'Các mẫu câu', 'business-terms', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+    (1, 'Tranh tả cảnh vật', 'business-conversation', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+    (1, 'Câu hỏi Who', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+    (1, 'Câu hỏi Where', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(1, 'Câu hỏi When', 'dai-tu', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-0', CURRENT_TIMESTAMP, 0),
+    (1, 'Câu hỏi Why', 'business-terms', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+    (1, 'Câu hỏi What', 'business-conversation', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+    (1, 'Câu hỏi Why', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+    (1, 'Câu hỏi Yes/ No', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(1, 'Hoàn thành câu: Entertainment', 'dai-tu', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+    (1, 'Hoàn thành câu: Finance & Budgeting', 'business-terms', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+    (1, 'Hoàn thành câu: General Business', 'business-conversation', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+    (1, 'Hoàn thành câu: Health', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+    (1, 'Hoàn thành câu: Housing/property', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+    (2, 'Listening: Trang tả người', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Reading: Giới thiệu chung về part 5', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Chủ đề về hợp đồng và tiếp thị', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Listening: Giới thiệu chung về câu hỏi WH và câu hỏi How', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Reading: Danh từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Chủ đề về bảo hành và kế hoạch kinh doanh', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Listening: Trang tả vật', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Reading: Đại từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Chủ đề về hội thảo và máy tính', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Listening: 7 dạng câu hỏi What', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Reading: Tính từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Chủ đề về thiết bị văn phòng và thủ tục tại văn phòng', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Listening: Tổng ôn tập part 1', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Reading: Trạng từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Chủ đề về điện tử và thư tín', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Listening: Câu hỏi Why và câu hỏi lựa chọn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Reading: Danh từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Chủ đề về quảng cáo việc làm & tuyển dụng, nộp hồ sơ và phỏng vấn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Reading 6: Giới thiệu chung về part 6', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Listening: Câu hỏi Yes/No', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Chủ đề về tuyển dụng & đào tạo và tiền lương & phúc lợi', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Reading: Hòa hợp S - V', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Listening: Giới thiệu về part 3', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Chủ đề về khuyến mãi, lương hưu, giải thưởng và mua sắm', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Reading: Bị động', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Listening: Câu hỏi nội dung', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Chủ đề về đặt hàng vật tư và vận chuyển', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Reading: Liên từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Listening: Câu hỏi trích dẫn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Chủ đề về hóa đơn và hàng tồn kho', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Reading: Mệnh đề quan hệ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Reading: Thì hoàn thành', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Reading: Thì tiếp diễn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Listening: Giới thiệu chung về part 4', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Reading: Giới thiệu về part 7', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Listening: Câu hỏi bảng biểu', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(2, 'Reading: Kỹ năng scanning', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Listening]Part 1 - Làm quen với dạng bài tả tranh', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, 'Bài giới thiệu về giáo viên và khóa học', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, 'Chủ đề về ngân hàng và kế toán', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Reading]Part 5 & Part 6 - Mẹo ngữ pháp nâng cao tổng hợp', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Listening]Part 2 - Dạng câu hỏi Who, Where, When', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, 'Chủ đề về đầu tư và thuế', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Reading]Part 7 - Giới thiệu cấu trúc bài thi và cách xử lý các dạng câu hỏi', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Listening]Part 3 - Làm quen với dạng câu hỏi hội thoại', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, 'Chủ đề về báo cáo tài chính, tài sản & phòng ban', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, 'Reading Part 5 & Part 6 - Vị trí trạng từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Listening]Part 4 - Câu hỏi thông tin chung và câu hỏi chi tiết', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, 'Chủ đề về phát triển sản phẩm và cho thuê', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Listening]Part 1 & Part 2 - Các bẫy thường gặp & dạng cây hỏi Why', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Reading] Part 7 - Kỹ thuật paraphrasing', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, 'Chủ đề về Các cuộc họp HĐQT & Ủy ban và Kiểm soát chất lượng', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Listening] Part 3 - Dạng câu hỏi bảng biểu', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Reading] Part 5 - Mệnh đề quan hệ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, 'Chủ đề về Chọn nhà hàng và Ăn ngoài', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Listening] Part 4 - Câu hỏi thông tin chi tiết', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Reading] Part 5 & Part 6 - Mệnh đề quan hệ rút gọn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, 'Chủ đề về Đặt đồ ăn trưa và Nghề nấu ăn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Listening] Part 2 - 4 bẫy phổ biến của bài thi', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Reading] Part 5 & Part 6 - Thể giả định theo sau là động từ số ít - Hoà hợp chủ vị nâng cao', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, 'Chủ đề về Sự kiện và Du lịch tổng hợp', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Listening] Part 4 - Câu hỏi cuối bài nói', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Reading] Part 6 - Câu hỏi từ vựng', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Listening] Part 3 - Chủ đề vể Hàng không và Tàu', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Reading] Part 7 - Kỹ thuật paraphrasing (2)', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Listening] Part 4 - Bẫy nhiễu thông tin', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, 'Chủ đề về Khách sạn và cho thuê ô tô', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, 'Chủ đề về Truyền thông và Phòng khám', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Reading] Part 5 & Part 6 - Tổng ôn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Listening] Part 3 - Tổng ôn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, '[Reading] Part 7 - Tổng ôn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, 'Chủ đề về Âm nhạc và Bảo tàng', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, 'Chủ đề về Rạp chiếu phim và Kịch nghệ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, 'Chủ đề bệnh viện và y dược', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(3, 'Chủ đề về nha sĩ và bảo hiểm y tế', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+    (4, 'Cấu trúc câu đơn giản', 'cau-truc-cau-don-gian', 'https://www.youtube.com/watch?v=9piusqcHneI', NOW(), 0),
+    (4, 'Danh từ', 'danh-tu', 'https://youtu.be/9uE7dWl-Gk8', NOW(), 0),
+    (4, 'Động từ', 'dong-tu', 'https://youtu.be/zGQLleQbCZ4', NOW(), 0),
+    (4, 'Tranh tả người: Các hoạt động của mắt', 'trang-ta-nguoi-cac-hoat-dong-cua-mat', 'https://youtu.be/M2Fkm6OKWYI', NOW(), 0),
+    (4, 'Tranh tả người: Các hoạt động của cơ thể', 'tranh-ta-nguoi-cac-hoat-dong-cua-co-the', 'https://youtu.be/WFFyFZRSPfQ?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (4, 'Đại từ', 'dai-tu', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (4, 'Tranh tả cảnh vật', 'business-terms', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (4, 'Tính từ và trạng từ', 'business-conversation', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (4, 'Tranh tả cảnh vật : ', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (4, 'Giới từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (4, 'Tranh tả cảnh vật', 'dai-tu', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (4, 'Các mẫu câu', 'business-terms', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (4, 'Tranh tả cảnh vật', 'business-conversation', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (4, 'Câu hỏi Who', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (4, 'Câu hỏi Where', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (4, 'Câu hỏi When', 'dai-tu', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-0', NOW(), 0),
+    (4, 'Câu hỏi Why', 'business-terms', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (4, 'Câu hỏi What', 'business-conversation', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (4, 'Câu hỏi Yes/No', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (4, 'Hoàn thành câu: Entertainment', 'dai-tu', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (4, 'Hoàn thành câu: Finance & Budgeting', 'business-terms', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (4, 'Hoàn thành câu: General Business', 'business-conversation', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (4, 'Hoàn thành câu: Health', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (4, 'Hoàn thành câu: Housing/property', 'starting-conversations', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Listening: Trang tả người', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Reading: Giới thiệu chung về part 5', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Chủ đề về hợp đồng và tiếp thị', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Listening: Giới thiệu chung về câu hỏi WH và câu hỏi How', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Reading: Danh từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Listening: Trang tả vật', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+	(5, 'Reading: Đại từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Chủ đề về hội thảo và máy tính', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Listening: 7 dạng câu hỏi What', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Reading: Tính từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Chủ đề về thiết bị văn phòng và thủ tục tại văn phòng', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Listening: Tổng ôn tập part 1', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Reading: Trạng từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Chủ đề về điện tử và thư tín', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Listening: Câu hỏi Why và câu hỏi lựa chọn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Reading: Danh từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Chủ đề về quảng cáo việc làm & tuyển dụng, nộp hồ sơ và phỏng vấn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Reading 6: Giới thiệu chung về part 6', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Listening: Câu hỏi Yes/No', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Chủ đề về tuyển dụng & đào tạo và tiền lương & phúc lợi', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Reading: Hòa hợp S - V', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Listening: Giới thiệu về part 3', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Chủ đề về khuyến mãi, lương hưu, giải thưởng và mua sắm', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Reading: Bị động', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Listening: Câu hỏi nội dung', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Chủ đề về đặt hàng vật tư và vận chuyển', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Reading: Liên từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Listening: Câu hỏi trích dẫn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Chủ đề về hóa đơn và hàng tồn kho', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Reading: Mệnh đề quan hệ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Reading: Thì hoàn thành', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Reading: Thì tiếp diễn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Listening: Giới thiệu chung về part 4', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Reading: Giới thiệu về part 7', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Listening: Câu hỏi bảng biểu', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (5, 'Reading: Kỹ năng scanning', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, '[Listening] Part 1 - Làm quen với dạng bài tả tranh', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, 'Bài giới thiệu về giáo viên và khóa học', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, 'Chủ đề về ngân hàng và kế toán', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, '[Reading] Part 5 & Part 6 - Mẹo ngữ pháp nâng cao tổng hợp', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, '[Listening] Part 2 - Dạng câu hỏi Who, Where, When', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, 'Chủ đề về đầu tư và thuế', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, '[Reading] Part 7 - Giới thiệu cấu trúc bài thi và cách xử lý các dạng câu hỏi', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, '[Listening] Part 3 - Làm quen với dạng câu hỏi hội thoại', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, 'Chủ đề về báo cáo tài chính, tài sản & phòng ban', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, '[Reading] Part 5 & Part 6 - Vị trí trạng từ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, '[Listening] Part 4 - Câu hỏi thông tin chung và câu hỏi chi tiết', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, 'Chủ đề về phát triển sản phẩm và cho thuê', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, '[Listening] Part 1 & Part 2 - Các bẫy thường gặp & dạng câu hỏi Why', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, '[Reading] Part 7 - Kỹ thuật paraphrasing', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, 'Chủ đề về Các cuộc họp HĐQT & Ủy ban và Kiểm soát chất lượng', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, '[Listening] Part 3 - Dạng câu hỏi bảng biểu', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, '[Reading] Part 5 - Mệnh đề quan hệ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, 'Chủ đề về Chọn nhà hàng và Ăn ngoài', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, '[Listening] Part 4 - Câu hỏi thông tin chi tiết', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, '[Reading] Part 5 & Part 6 - Mệnh đề quan hệ rút gọn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, 'Chủ đề về Đặt đồ ăn trưa và Nghề nấu ăn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, '[Listening] Part 2 - 4 bẫy phổ biến của bài thi', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, '[Reading] Part 5 & Part 6 - Thể giả định theo sau là động từ số ít - Hoà hợp chủ vị nâng cao', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, 'Chủ đề về Sự kiện và Du lịch tổng hợp', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+    (6, '[Listening] Part 4 - Câu hỏi cuối bài nói', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', NOW(), 0),
+	(7, '[Reading] Part 6 - Câu hỏi từ vựng', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(7, '[Listening] Part 3 - Chủ đề vể Hàng không và Tàu', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(7, '[Reading] Part 7 - Kỹ thuật paraphrasing (2)', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(7, '[Listening] Part 4 - Bẫy nhiễu thông tin', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(7, 'Chủ đề về Khách sạn và cho thuê ô tô', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(7, 'Chủ đề về Truyền thông và Phòng khám', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(7, '[Reading] Part 5 & Part 6 - Tổng ôn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(7, '[Listening] Part 3 - Tổng ôn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(7, '[Reading] Part 7 - Tổng ôn', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(7, 'Chủ đề về Âm nhạc và Bảo tàng', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(7, 'Chủ đề về Rạp chiếu phim và Kịch nghệ', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(7, 'Chủ đề bệnh viện và y dược', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0),
+	(7, 'Chủ đề về nha sĩ và bảo hiểm y tế', 'polite-phrases', 'https://youtu.be/uTMgvm8ph_0?list=PLoSt3iURq5e1Y6q9dZuhsZnVSaLMKqcr-', CURRENT_TIMESTAMP, 0);
+-- Chèn dữ liệu vào bảng exercise 
 INSERT INTO Exercises (lesson_id, exercise_name, exercise_link)
 VALUES 
-    (1, N'Cấu trúc câu đơn giản', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (2, N'Danh từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (3, N'Động từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (4, N'Tranh tả người: Các hoạt động của mắt', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (5, N'Tranh tả người: Các hoạt động của cơ thể', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (6, N'Đại từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (7, N'Tranh tả cảnh vật', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (8, N'Tính từ và trạng từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (9, N'Tranh tả cảnh vật', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (10, N'Giới từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (11, N'Tranh tả cảnh vật', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (12, N'Các mẫu câu', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (13, N'Tranh tả cảnh vật', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (14, N'Câu hỏi Who', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (15, N'Câu hỏi Where', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (16, N'Câu hỏi When', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (17, N'Câu hỏi Why', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (18, N'Câu hỏi What', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (19, N'Câu hỏi Why', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (20, N'Câu hỏi Yes/No', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (21, N'Hoàn thành câu: Entertainment', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (22, N'Hoàn thành câu: Finance & Budgeting', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (23, N'Hoàn thành câu: General Business', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (24, N'Hoàn thành câu: Health', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (25, N'Hoàn thành câu: Housing/property', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (26, N'Listening: Trang tả người', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (27, N'Reading: Giới thiệu chung về part 5', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (28, N'Chủ đề về hợp đồng và tiếp thị', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (29, N'Listening: Giới thiệu chung về câu hỏi WH và câu hỏi How', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (30, N'Reading: Danh từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (31, N'Chủ đề về bảo hành và kế hoạch kinh doanh', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (32, N'Listening: Trang tả vật', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (33, N'Reading: Đại từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-    (34, N'Chủ đề về hội thảo và máy tính', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(35, N'Listening: 7 dạng câu hỏi What', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(36, N'Reading: Tính từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(37, N'Chủ đề về thiết bị văn phòng và thủ tục tại văn phòng', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(38, N'Listening: Tổng ôn tập part 1', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(39, N'Reading: Trạng từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(40, N'Chủ đề về điện tử và thư tín', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(41, N'Listening: Câu hỏi Why và câu hỏi lựa chọn', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(42, N'Reading: Danh từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(43, N'Chủ đề về quảng cáo việc làm & tuyển dụng, nộp hồ sơ và phỏng vấn', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(44, N'Reading 6: Giới thiệu chung về part 6', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(45, N'Listening: Câu hỏi Yes/No', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(46, N'Chủ đề về tuyển dụng & đào tạo và tiền lương & phúc lợi', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(47, N'Reading: Hòa hợp S - V', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(48, N'Listening: Giới thiệu về part 3', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(49, N'Chủ đề về khuyến mãi, lương hưu, giải thưởng và mua sắm', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(50, N'Reading: Bị động', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(51, N'Listening: Câu hỏi nội dung', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(52, N'Chủ đề về đặt hàng vật tư và vận chuyển', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(53, N'Reading: Liên từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(54, N'Listening: Câu hỏi trích dẫn', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(55, N'Chủ đề về hóa đơn và hàng tồn kho', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(56, N'Reading: Mệnh đề quan hệ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(57, N'Reading: Thì hoàn thành', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(58, N'Reading: Thì tiếp diễn', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(59, N'Listening: Giới thiệu chung về part 4', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(60, N'Reading: Giới thiệu về part 7', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(61, N'Listening: Câu hỏi bảng biểu', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(62, N'Reading: Kỹ năng scanning', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(63, N'[Listening]Part 1 - Làm quen với dạng bài tả tranh', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(64, N'Bài giới thiệu về giáo viên và khóa học', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(65, N'Chủ đề về ngân hàng và kế toán', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(66, N'[Reading]Part 5 & Part 6 - Mẹo ngữ pháp nâng cao tổng hợp', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(67, N'[Listening]Part 2 - Dạng câu hỏi Who, Where, When', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(68, N'Chủ đề về đầu tư và thuế', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(69, N'[Reading]Part 7 - Giới thiệu cấu trúc bài thi và cách xử lý các dạng câu hỏi', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(70, N'[Listening]Part 3 - Làm quen với dạng câu hỏi hội thoại', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(71, N'Chủ đề về báo cáo tài chính, tài sản & phòng ban', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(72, N'[Reading]Part 5 & Part 6 - Vị trí trạng từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(73, N'[Listening]Part 4 - Câu hỏi thông tin chung và câu hỏi chi tiết', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(74, N'Chủ đề về phát triển sản phẩm và cho thuê', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(75, N'[Listening]Part 1 & Part 2 - Các bẫy thường gặp & dạng cây hỏi Why', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(76, N'[Reading] Part 7 - Kỹ thuật paraphrasing', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(77, N'Chủ đề về Các cuộc họp HĐQT & Ủy ban và Kiểm soát chất lượng', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(78, N'[Listening] Part 3 - Dạng câu hỏi bảng biểu', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(79, N'[Reading] Part 5 - Mệnh đề quan hệ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(80, N'Chủ đề về Chọn nhà hàng và Ăn ngoài', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(81, N'[Listening] Part 4 - Câu hỏi thông tin chi tiết', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(82, N'[Reading] Part 5 & Part 6 - Mệnh đề quan hệ rút gọn', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(83, N'Chủ đề về Đặt đồ ăn trưa và Nghề nấu ăn', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(84, N'[Listening] Part 2 - 4 bẫy phổ biến của bài thi', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(85, N'[Reading] Part 5 & Part 6 - Thể giả định theo sau là động từ số ít - Hoà hợp chủ vị nâng cao', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(86, N'Chủ đề về Sự kiện và Du lịch tổng hợp', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(87, N'[Listening] Part 4 - Câu hỏi cuối bài nói', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(88, N'[Reading] Part 6 - Câu hỏi từ vựng', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(89, N'[Listening] Part 3 - Chủ đề về Hàng không và Tàu', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(90, N'[Reading] Part 7 - Kỹ thuật paraphrasing (2)', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(91, N'[Listening] Part 4 - Bẫy nhiễu thông tin', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(92, N'Chủ đề về Khách sạn và cho thuê ô tô', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(93, N'Chủ đề về Truyền thông và Phòng khám', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(94, N'[Reading] Part 5 & Part 6 - Tổng ôn', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(95, N'[Listening] Part 3 - Tổng ôn', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(96, N'[Reading] Part 7 - Tổng ôn', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(97, N'Chủ đề về Âm nhạc và Bảo tàng', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(98, N'Chủ đề về Rạp chiếu phim và Kịch nghệ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(99, N'Chủ đề bệnh viện và y dược', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
-(100, N'Chủ đề về nha sĩ và bảo hiểm y tế', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing');
+    (1, 'Cấu trúc câu đơn giản', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (2, 'Danh từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (3, 'Động từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (4, 'Tranh tả người: Các hoạt động của mắt', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (5, 'Tranh tả người: Các hoạt động của cơ thể', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (6, 'Đại từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (7, 'Tranh tả cảnh vật', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (8, 'Tính từ và trạng từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (9, 'Tranh tả cảnh vật', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (10, 'Giới từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (11, 'Tranh tả cảnh vật', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (12, 'Các mẫu câu', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (13, 'Tranh tả cảnh vật', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (14, 'Câu hỏi Who', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (15, 'Câu hỏi Where', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (16, 'Câu hỏi When', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (17, 'Câu hỏi Why', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (18, 'Câu hỏi What', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (19, 'Câu hỏi Why', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (20, 'Câu hỏi Yes/No', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (21, 'Hoàn thành câu: Entertainment', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (22, 'Hoàn thành câu: Finance & Budgeting', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (23, 'Hoàn thành câu: General Business', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (24, 'Hoàn thành câu: Health', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (25, 'Hoàn thành câu: Housing/property', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (26, 'Listening: Trang tả người', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (27, 'Reading: Giới thiệu chung về part 5', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (28, 'Chủ đề về hợp đồng và tiếp thị', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (29, 'Listening: Giới thiệu chung về câu hỏi WH và câu hỏi How', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (30, 'Reading: Danh từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (31, 'Chủ đề về bảo hành và kế hoạch kinh doanh', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (32, 'Listening: Trang tả vật', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (33, 'Reading: Đại từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (34, 'Chủ đề về hội thảo và máy tính', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (35, 'Listening: 7 dạng câu hỏi What', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (36, 'Reading: Tính từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (37, 'Chủ đề về thiết bị văn phòng và thủ tục tại văn phòng', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (38, 'Listening: Tổng ôn tập part 1', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+	(39, 'Reading: Trạng từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (40, 'Chủ đề về điện tử và thư tín', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (41, 'Listening: Câu hỏi Why và câu hỏi lựa chọn', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (42, 'Reading: Danh từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (43, 'Chủ đề về quảng cáo việc làm & tuyển dụng, nộp hồ sơ và phỏng vấn', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (44, 'Reading 6: Giới thiệu chung về part 6', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (45, 'Listening: Câu hỏi Yes/No', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+	(46, 'Chủ đề về tuyển dụng & đào tạo và tiền lương & phúc lợi', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (47, 'Reading: Hòa hợp S - V', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (48, 'Listening: Giới thiệu về part 3', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (49, 'Chủ đề về khuyến mãi, lương hưu, giải thưởng và mua sắm', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (50, 'Reading: Bị động', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (51, 'Listening: Câu hỏi nội dung', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (52, 'Chủ đề về đặt hàng vật tư và vận chuyển', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (53, 'Reading: Liên từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (54, 'Listening: Câu hỏi trích dẫn', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (55, 'Chủ đề về hóa đơn và hàng tồn kho', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (56, 'Reading: Mệnh đề quan hệ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (57, 'Reading: Thì hoàn thành', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (58, 'Reading: Thì tiếp diễn', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+	(59, 'Listening: Giới thiệu chung về part 4', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (60, 'Reading: Giới thiệu về part 7', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (61, 'Listening: Câu hỏi bảng biểu', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (62, 'Reading: Kỹ năng scanning', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (63, '[Listening]Part 1 - Làm quen với dạng bài tả tranh', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (64, 'Bài giới thiệu về giáo viên và khóa học', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (65, 'Chủ đề về ngân hàng và kế toán', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (66, '[Reading]Part 5 & Part 6 - Mẹo ngữ pháp nâng cao tổng hợp', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (67, '[Listening]Part 2 - Dạng câu hỏi Who, Where, When', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+	(68, 'Chủ đề về đầu tư và thuế', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (69, '[Reading]Part 7 - Giới thiệu cấu trúc bài thi và cách xử lý các dạng câu hỏi', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (70, '[Listening]Part 3 - Làm quen với dạng câu hỏi hội thoại', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(71, 'Chủ đề về báo cáo tài chính, tài sản & phòng ban', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(72, '[Reading]Part 5 & Part 6 - Vị trí trạng từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(73, '[Listening]Part 4 - Câu hỏi thông tin chung và câu hỏi chi tiết', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(74, 'Chủ đề về phát triển sản phẩm và cho thuê', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(75, '[Listening]Part 1 & Part 2 - Các bẫy thường gặp & dạng cây hỏi Why', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(76, '[Reading] Part 7 - Kỹ thuật paraphrasing', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(77, 'Chủ đề về Các cuộc họp HĐQT & Ủy ban và Kiểm soát chất lượng', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(78, '[Listening] Part 3 - Dạng câu hỏi bảng biểu', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(79, '[Reading] Part 5 - Mệnh đề quan hệ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(80, 'Chủ đề về Chọn nhà hàng và Ăn ngoài', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(81, '[Listening] Part 4 - Câu hỏi thông tin chi tiết', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(82, '[Reading] Part 5 & Part 6 - Mệnh đề quan hệ rút gọn', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(83, 'Chủ đề về Đặt đồ ăn trưa và Nghề nấu ăn', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(84, '[Listening] Part 2 - 4 bẫy phổ biến của bài thi', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(85, '[Reading] Part 5 & Part 6 - Thể giả định theo sau là động từ số ít - Hoà hợp chủ vị nâng cao', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(86, 'Chủ đề về Sự kiện và Du lịch tổng hợp', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(87, '[Listening] Part 4 - Câu hỏi cuối bài nói', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(88, '[Reading] Part 6 - Câu hỏi từ vựng', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(89, '[Listening] Part 3 - Chủ đề về Hàng không và Tàu', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(90, '[Reading] Part 7 - Kỹ thuật paraphrasing (2)', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(91, '[Listening] Part 4 - Bẫy nhiễu thông tin', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(92, 'Chủ đề về Khách sạn và cho thuê ô tô', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(93, 'Chủ đề về Truyền thông và Phòng khám', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(94, '[Reading] Part 5 & Part 6 - Tổng ôn', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(95, '[Listening] Part 3 - Tổng ôn', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(96, '[Reading] Part 7 - Tổng ôn', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(97, 'Chủ đề về Âm nhạc và Bảo tàng', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(98, 'Chủ đề về Rạp chiếu phim và Kịch nghệ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(99, 'Chủ đề bệnh viện và y dược', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+(100, 'Chủ đề về nha sĩ và bảo hiểm y tế', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing');
+-- Chèn dữ liệu vào bảng enrollments
+INSERT INTO enrollments (user_id, course_id, enrolled_at)
+VALUES 
+    (1, 1, CURRENT_TIMESTAMP), 
+    (2, 2, CURRENT_TIMESTAMP);
+
+-- Chèn dữ liệu vào bảng Exercises
+INSERT INTO Exercises (lesson_id, exercise_name, exercise_link)
+VALUES 
+    (1, 'Cấu trúc câu đơn giản', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing'),
+    (2, 'Danh từ', 'https://docs.google.com/document/d/1hJIz5TA0XR4myZPLAZjdkPrhXi0o9tOzxHkWtvk8BIY/edit?usp=sharing');
+
+-- Chèn dữ liệu vào bảng Progress
 INSERT INTO Progress (user_id, course_id, lessons_completed, exercises_completed, last_accessed_date)
 VALUES 
-    (1, 1, 2, 1, GETDATE()), (2, 2, 3, 2, GETDATE());
-  
+    (1, 1, 2, 1, CURRENT_TIMESTAMP), 
+    (2, 2, 3, 2, CURRENT_TIMESTAMP);
+
+-- Chèn dữ liệu vào bảng Notifications
 INSERT INTO Notifications (user_id, message, notification_date, status)
 VALUES 
-    (1, N'Bạn có bài giảng mới.', GETDATE(), 'unread'), (2, N'Hoàn thành bài kiểm tra.', GETDATE(), 'unread'),
-    (1, N'Bài giảng đã được cập nhật.', GETDATE(), 'unread');
-INSERT INTO StudyPaths (course_id, path_name, lesson_id)
+    (1, 'Bạn có bài giảng mới.', CURRENT_TIMESTAMP, 'unread'), 
+    (2, 'Hoàn thành bài kiểm tra.', CURRENT_TIMESTAMP, 'unread'),
+    (1, 'Bài giảng đã được cập nhật.', CURRENT_TIMESTAMP, 'unread');
+
+-- Chèn dữ liệu vào bảng VocabularyLists
+INSERT INTO VocabularyLists (list_name, user_id, created_at)
 VALUES 
-    (1, N'Introduction Path', 1), (1, N'Grammar Path', 2), (2, N'Vocabulary Path', 3), (2, N'Listening Path', 4),
-    (3, N'Advanced Grammar Path', 5), (3, N'Conversation Path', 6), (4, N'Business Terms Path', 7),
-    (4, N'Business Conversation Path', 8), (5, N'Start Conversations Path', 9), (5, N'Polite Phrases Path', 10);
-INSERT INTO VocabularyLists (list_name, user_id, created_date)
-VALUES 
-    (N'Basic Vocabulary', 1, GETDATE()), (N'Intermediate Vocabulary', 2, GETDATE()), 
-    (N'Advanced Vocabulary', 1, GETDATE()), (N'Business Vocabulary', 2, GETDATE()), 
-    (N'Conversational Vocabulary', 1, GETDATE()), (N'Grammar Terms', 2, GETDATE()), 
-    (N'Listening Words', 1, GETDATE()), (N'IELTS Words', 2, GETDATE()), 
-    (N'TOEFL Words', 1, GETDATE()), (N'Common English Words', 2, GETDATE());
+    ('Basic Vocabulary', 1, CURRENT_TIMESTAMP), 
+    ('Intermediate Vocabulary', 2, CURRENT_TIMESTAMP);
+
+-- Chèn dữ liệu vào bảng Vocabulary
 INSERT INTO Vocabulary (vocab_list_id, word, definition)
 VALUES 
-    (1, N'Hello', N'Lời chào'), (1, N'Goodbye', N'Tạm biệt'), (2, N'Intermediate', N'Trung cấp'), 
-    (2, N'Listening', N'Luyện nghe'), (3, N'Advanced', N'Nâng cao'), 
-    (4, N'Business', N'Kinh doanh'),
-    (5, N'Quiz', N'Bài kiểm tra');
+    (1, 'Hello', 'Lời chào'), 
+    (1, 'Goodbye', 'Tạm biệt');
+
+-- Chèn dữ liệu vào bảng Ratings
 INSERT INTO Ratings (user_id, course_id, review_text, created_at)
 VALUES 
-    (1, 1, N'Khóa học rất bổ ích.', GETDATE()), (2, 2, N'Tôi học được rất nhiều.', GETDATE());
-
-
-
- 
-    
-
+    (1, 1, 'Khóa học rất bổ ích.', CURRENT_TIMESTAMP), 
+    (2, 2, 'Tôi học được rất nhiều.', CURRENT_TIMESTAMP);
+SELECT * FROM Users;
 
