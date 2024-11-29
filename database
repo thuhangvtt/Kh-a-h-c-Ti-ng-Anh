@@ -9,9 +9,9 @@ USE KHTA;
 CREATE TABLE Users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
     user_name VARCHAR(255),
-    password VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
     telephone VARCHAR(15),
     disabled BIT DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -22,10 +22,10 @@ CREATE TABLE Users (
 CREATE TABLE admin_account (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     name VARCHAR(255),
     telephone VARCHAR(15),
-    email VARCHAR(255) NOT NULL UNIQUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     modified_at DATETIME ON UPDATE CURRENT_TIMESTAMP 
 );
@@ -73,6 +73,7 @@ CREATE TABLE enrollments (
     user_id INT NOT NULL,
     course_id INT NOT NULL,
     enrolled_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR (50) DEFAULT 'pending',
     PRIMARY KEY (user_id, course_id),
     FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
@@ -154,9 +155,9 @@ VALUES
     ('giang', 'user2@example.com', 'pass456');
 
 -- Chèn dữ liệu vào bảng admin_account
-INSERT INTO admin_account (username, password, name, telephone, email, created_at)
+INSERT INTO admin_account (username, email,  password, name, telephone, created_at)
 VALUES 
-    ('hang_2004', '12345', 'Thu Hằng', '0971397361', 'hangv2k@gmail.com', CURRENT_TIMESTAMP);
+    ('hang_2004', 'hangv2k@gmail.com', '12345', 'Thu Hằng', '0971397361', CURRENT_TIMESTAMP);
 
 -- Chèn dữ liệu vào bảng categories
 INSERT INTO categories (slug, img, name, description)
