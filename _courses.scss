@@ -1,0 +1,113 @@
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chi tiết khóa học</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Chia layout thành 2 cột */
+        .container {
+            display: flex;
+            gap: 30px;
+        }
+
+        .course-detail {
+            flex: 1;
+        }
+
+        .lesson-list {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .lesson-item {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .lesson-item h4 {
+            margin: 0;
+            font-size: 1.1em;
+        }
+
+        .lesson-item p.lesson-date {
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        .btn-learn {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 10px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .btn-learn:hover {
+            background-color: #0056b3;
+        }
+
+        /* Style cho thông tin khóa học */
+        .course-info {
+            background-color: #fff;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .course-info h3 {
+            margin-top: 0;
+        }
+
+        .course-info img {
+            max-width: 100%;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Thông tin khóa học -->
+        <div class="course-detail">
+            <div class="course-info">
+                <h3>${course.name}</h3>
+                <img src="${course.image}" alt="${course.name}">
+                <p>${course.description}</p>
+                <a href="register_course.jsp?courseId=${course.id}" class="btn-learn">Đăng ký khóa học</a>
+            </div>
+        </div>
+
+        <!-- Danh sách bài giảng -->
+        <div class="lesson-list">
+            <h2>Danh sách bài giảng</h2>
+            <c:choose>
+                <c:when test="${not empty lessons}">
+                    <c:forEach var="lesson" items="${lessons}">
+                        <div class="lesson-item">
+                            <h4>${lesson.title}</h4>
+                            <p class="lesson-date">Ngày tạo: ${lesson.createdAt}</p>
+                            <a href="video_detail.jsp?lessonId=${lesson.id}&videoLink=${lesson.videoLink}" class="btn-learn">Vào học</a>
+                        </div>
+                    </c:forEach>
+                </c:when>
+                <c:otherwise>
+                    <p>Không có bài học nào trong khóa học này.</p>
+                </c:otherwise>
+            </c:choose>
+        </div>
+    </div>
+
+    <a href="home.jsp">Quay lại trang chủ</a>
+</body>
+</html>
