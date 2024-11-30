@@ -167,15 +167,15 @@ VALUES
     ('tieng-anh-giao-tiep', 'img3.jpg', 'Tiếng Anh Giao Tiếp', 'Khóa học Tiếng Anh Giao Tiếp...');
 
 -- Chèn dữ liệu vào bảng courses
-INSERT INTO courses (name, slug, image, description, category_id, NumberEnrolled, Objectives, created_at, disabled)
+INSERT INTO courses (name, description , image, slug, category_id, NumberEnrolled, Objectives, created_at, disabled)
 VALUES 
-    ('Nền tảng TOEIC', 'nen-tang-toiec', 'img_toeic_foundation.jpg', 'Khóa học nền tảng TOEIC...', 1, 20, 'Chuẩn bị nền tảng cho TOEIC.', CURRENT_TIMESTAMP, 0),
-    ('TOEIC trung cấp', 'toeic-trung-cap', 'img_toeic_intermediate.jpg', 'Khóa học TOEIC trung cấp.', 1, 30, 'Nâng cao kiến thức TOEIC.', CURRENT_TIMESTAMP, 0),
-    ('TOEIC chuyên sâu', 'toeic-chuyen-sau', 'img_toeic_advanced.jpg', 'Khóa học TOEIC nâng cao cho người chuẩn bị thi TOEIC.', 1, 40, 'Luyện thi TOEIC nâng cao.', CURRENT_TIMESTAMP, 0),
-    ('IELTS Foundation', 'ielts-foundation', 'img_ielts_foundation.jpg', 'Khóa học nền tảng IELTS.', 2, 25, 'Chuẩn bị nền tảng cho IELTS.', CURRENT_TIMESTAMP, 0),
-    ('IELTS Intensive Reading', 'ielts-intensive-reading', 'img_ielts_reading.jpg', 'Luyện đọc chuyên sâu cho kỳ thi IELTS.', 2, 35, 'Kỹ năng đọc IELTS.', CURRENT_TIMESTAMP, 0),
-    ('IELTS Writing Skills', 'ielts-writing-skills', 'img_ielts_writing.jpg', 'Phát triển kỹ năng viết cho IELTS.', 2, 30, 'Nâng cao kỹ năng viết cho IELTS.', CURRENT_TIMESTAMP, 0),
-    ('Tiếng Anh giao tiếp', 'tieng-anh-giao-tiep', 'img_conv_advanced.jpg', 'Tăng cường kỹ năng giao tiếp tiếng Anh.', 3, 15, 'Luyện giao tiếp nâng cao.', CURRENT_TIMESTAMP, 0);
+    ('Nền tảng TOEIC', 'Khóa học nền tảng TOEIC cho người mới bắt đầu.', 'img_toeic_foundation.jpg', 'nen-tang-toiec', 1, 20, 'Chuẩn bị nền tảng cho TOEIC.', CURRENT_TIMESTAMP, 0),
+    ('TOEIC trung cấp', 'Khóa học TOEIC trung cấp', 'img_toeic_intermediate.jpg', 'toeic-trung-cap', 1, 30, 'Nâng cao kiến thức TOEIC.', CURRENT_TIMESTAMP, 0),
+    ('TOEIC chuyên sâu', 'Khóa học TOEIC nâng cao cho người chuẩn bị thi TOEIC.', 'img_toeic_advanced.jpg', 'toeic-chuyen-sau.', 1, 40, 'Luyện thi TOEIC nâng cao.', CURRENT_TIMESTAMP, 0),
+    ('IELTS Foundation', 'Khóa học nền tảng IELTS', 'img_ielts_foundation.jpg', 'ielts-foundation', 2, 25, 'Chuẩn bị nền tảng cho IELTS.', CURRENT_TIMESTAMP, 0),
+    ('IELTS Intensive Reading', 'Luyện đọc chuyên sâu cho kỳ thi IELTS', 'img_ielts_reading.jpg', 'ielts-intensive-reading', 2, 35, 'Kỹ năng đọc IELTS.', CURRENT_TIMESTAMP, 0),
+    ('IELTS Writing Skills', 'Phát triển kỹ năng viết cho IELTS', 'img_ielts_writing.jpg', 'ielts-writing-skills.', 2, 30, 'Nâng cao kỹ năng viết cho IELTS.', CURRENT_TIMESTAMP, 0),
+    ('Tiếng Anh giao tiếp', 'Tăng cường kỹ năng giao tiếp tiếng Anh' ,'img_conv_advanced.jpg', 'tieng-anh-giao-tiep.', 3, 15, 'Luyện giao tiếp nâng cao.', CURRENT_TIMESTAMP, 0);
 -- Chèn dữ liệu vào bảng Lessons
 INSERT INTO Lessons (course_id, title, slug, video_link, created_at, is_disabled)
 VALUES 
@@ -525,4 +525,3 @@ VALUES
     (1, 1, 'Khóa học rất bổ ích.', CURRENT_TIMESTAMP), 
     (2, 2, 'Tôi học được rất nhiều.', CURRENT_TIMESTAMP);
 SELECT * FROM Users;
-
